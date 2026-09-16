@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>[the] masonybook</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Официальные SDK Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --glass-surface: rgba(255, 255, 255, 0.85);
+      --glass-surface-card: rgba(255, 255, 255, 0.95);
+      --glass-specular: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(59, 89, 152, 0.08) 100%);
+      --glass-border: rgba(255, 255, 255, 0.9);
+      --glass-border-blue: rgba(59, 89, 152, 0.22);
+      --glass-shadow: 0 20px 45px rgba(24, 60, 120, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03), inset 0 1px 2px rgba(255, 255, 255, 1);
+
+      --fb-blue: #3b5998;
+      --fb-blue-dark: #2d4373;
+      --accent: #1877f2;
+      --accent-glow: rgba(24, 119, 242, 0.28);
+      --accent-soft: rgba(24, 119, 242, 0.1);
+      
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --header-bg: rgba(59, 89, 152, 0.94);
+      --blob-1: rgba(24, 119, 242, 0.16);
+      --blob-2: rgba(59, 89, 152, 0.12);
+      --grid-line: rgba(59, 89, 152, 0.04);
+      --input-bg: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .ambient-mesh {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .light-orb-1 {
+      position: absolute;
+      width: 750px;
+      height: 750px;
+      top: -180px;
+      left: 10%;
+      background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%);
+      filter: blur(100px);
+      animation: floatOrb 12s infinite alternate ease-in-out;
+    }
+
+    .light-orb-2 {
+      position: absolute;
+      width: 850px;
+      height: 850px;
+      top: 35%;
+      right: -150px;
+      background: radial-gradient(circle, var(--blob-2) 0%, transparent 70%);
+      filter: blur(120px);
+      animation: floatOrb 16s infinite alternate-reverse ease-in-out;
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(40px) scale(1.06); }
+    }
+
+    .grid-lines {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 55px 55px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: sticky;
+      top: 14px;
+      left: 50%;
+      width: min(95%, 1160px);
+      margin: 0 auto;
+      z-index: 100;
+      background: var(--header-bg);
+      backdrop-filter: blur(28px) saturate(200%);
+      -webkit-backdrop-filter: blur(28px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 16px 36px rgba(45, 67, 115, 0.25), inset 0 1px 1.5px rgba(255, 255, 255, 0.5);
+    }
+
+    .brand-logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.4rem;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      text-transform: lowercase;
+    }
+
+    .brand-logo .bracket {
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 700;
+    }
+
+    .brand-logo span.the {
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .brand-logo span.name {
+      color: #ffffff;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .user-select {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .user-select option {
+      background: #ffffff;
+      color: var(--text);
+    }
+
+    .container {
+      width: min(95%, 1160px);
+      margin: 30px auto 60px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 28px;
+      position: relative;
+      z-index: 10;
+      flex: 1;
+    }
+
+    .liquid-panel {
+      background: var(--glass-surface);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid var(--glass-border);
+      border-radius: 26px;
+      box-shadow: var(--glass-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .liquid-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      background: var(--glass-specular);
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .profile-sidebar {
+      padding: 30px 24px;
+      height: fit-content;
+      position: sticky;
+      top: 86px;
+      text-align: center;
+    }
+
+    .avatar-wrap {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid var(--fb-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.8rem;
+      box-shadow: 0 8px 24px rgba(59, 89, 152, 0.18);
+    }
+
+    .profile-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--fb-blue-dark);
+      margin-bottom: 4px;
+    }
+
+    .profile-status {
+      font-size: 0.92rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    .profile-info-list {
+      text-align: left;
+      border-top: 1px solid rgba(59, 89, 152, 0.1);
+      border-bottom: 1px solid rgba(59, 89, 152, 0.1);
+      padding: 16px 0;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.88rem;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .info-val {
+      color: var(--text);
+      font-weight: 700;
+      margin-top: 1px;
+    }
+
+    .profile-btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.86rem;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--fb-blue);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(59, 89, 152, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--fb-blue-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 89, 152, 0.4);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      border: 1px solid var(--glass-border-blue);
+      color: var(--fb-blue);
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-soft);
+      border-color: var(--fb-blue);
+    }
+
+    .users-box {
+      margin-top: 24px;
+      text-align: left;
+    }
+
+    .users-box-title {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      border: 1px solid transparent;
+      color: var(--text);
+    }
+
+    .user-chip:hover {
+      background: rgba(59, 89, 152, 0.06);
+    }
+
+    .user-chip.active {
+      background: #ffffff;
+      border-color: var(--fb-blue);
+      color: var(--fb-blue);
+      box-shadow: 0 2px 8px rgba(59, 89, 152, 0.12);
+      font-weight: 700;
+    }
+
+    .wall-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .post-composer {
+      padding: 22px;
+    }
+
+    .post-composer textarea {
+      width: 100%;
+      height: 85px;
+      background: var(--input-bg);
+      border: 1px solid rgba(59, 89, 152, 0.18);
+      border-radius: 14px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.96rem;
+      resize: none;
+      outline: none;
+    }
+
+    .post-composer textarea:focus {
+      border-color: var(--fb-blue);
+      box-shadow: 0 0 14px var(--accent-glow);
+      background: #ffffff;
+    }
+
+    .composer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .composer-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .post-card {
+      padding: 24px;
+      margin-bottom: 16px;
+      animation: postAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes postAppear {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(6px); }
+      to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+
+    .post-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .post-author-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .post-author-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid var(--glass-border-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    .post-author-name {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--fb-blue-dark);
+    }
+
+    .post-date {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    .post-content {
+      font-size: 0.98rem;
+      line-height: 1.7;
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      padding: 16px;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      width: min(96%, 480px);
+      padding: 30px;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+      transform: translateY(20px) scale(0.96);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .modal-box {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--fb-blue-dark);
+      margin-bottom: 18px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .modal-input {
+      background: var(--input-bg);
+      border: 1px solid rgba(59, 89, 152, 0.2);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .modal-input:focus {
+      border-color: var(--fb-blue);
+      box-shadow: 0 0 12px var(--accent-glow);
+      background: #ffffff;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 820px) {
+      .container { grid-template-columns: 1fr; margin-top: 18px; }
+      .profile-sidebar { position: static; }
+      header { border-radius: 20px; padding: 10px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-mesh">
+    <div class="light-orb-1"></div>
+    <div class="light-orb-2"></div>
+  </div>
+  <div class="grid-lines"></div>
+
+  <header>
+    <div class="brand-logo">
+      <span class="bracket">[</span><span class="the">the</span><span class="bracket">]</span>
+      <span class="name">masonybook</span>
+    </div>
+
+    <div class="header-controls">
+      <div class="user-badge">
+        <span>Вы:</span>
+        <select class="user-select" id="activeUserSelect" onchange="switchCurrentUser(this.value)">
+        </select>
+      </div>
+
+      <button class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem; background: #ffffff; color: var(--fb-blue); box-shadow: none;" onclick="openModal('createModal')">
+        + Профиль
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="liquid-panel profile-sidebar">
+      <div class="avatar-wrap" id="profAvatar">⏳</div>
+      <h2 class="profile-name" id="profName">Загрузка...</h2>
+      <div class="profile-status" id="profStatus">Подключение к базе...</div>
+
+      <div class="profile-info-list">
+        <div class="info-item">
+          <span class="info-label">📍 Город</span>
+          <span class="info-val" id="profCity">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">🎓 Образование</span>
+          <span class="info-val" id="profEdu">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">🎾 Хобби</span>
+          <span class="info-val" id="profHobby">-</span>
+        </div>
+      </div>
+
+      <div class="profile-btn-row">
+        <button class="btn btn-secondary" onclick="openEditModal()">Редактировать</button>
+      </div>
+
+      <div class="users-box">
+        <div class="users-box-title">
+          <span>Участники:</span>
+          <span id="usersCount" style="color: var(--fb-blue); font-weight: 900;">0</span>
+        </div>
+        <div id="usersList"></div>
+      </div>
+    </aside>
+
+    <main class="wall-column">
+      <div class="liquid-panel post-composer">
+        <textarea id="postText" placeholder="Что у вас нового? Напишите на стене..."></textarea>
+        <div class="composer-bottom">
+          <div class="composer-hint" id="composerHint">Публикация...</div>
+          <button class="btn btn-primary" onclick="publishPost()">Опубликовать</button>
+        </div>
+      </div>
+
+      <div id="feed"></div>
+    </main>
+  </div>
+
+  <!-- Модальное окно редактирования -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+      <h3 class="modal-title">Редактировать профиль</h3>
+      <div class="form-group">
+        <label>Имя пользователя</label>
+        <input type="text" id="editName" class="modal-input">
+      </div>
+      <div class="form-group">
+        <label>Аватар (эмодзи)</label>
+        <input type="text" id="editAvatar" class="modal-input" maxlength="2">
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <input type="text" id="editStatus" class="modal-input">
+      </div>
+      <div class="form-group">
+        <label>Город</label>
+        <input type="text" id="editCity" class="modal-input">
+      </div>
+      <div class="form-group">
+        <label>Образование</label>
+        <input type="text" id="editEdu" class="modal-input">
+      </div>
+      <div class="form-group">
+        <label>Хобби</label>
+        <input type="text" id="editHobby" class="modal-input">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('editModal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveProfileEdit()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно создания нового профиля -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal-box">
+      <h3 class="modal-title">+ Новый профиль</h3>
+      <div class="form-group">
+        <label>Имя *</label>
+        <input type="text" id="createName" class="modal-input" placeholder="Например: Денис" required>
+      </div>
+      <div class="form-group">
+        <label>Аватар (эмодзи)</label>
+        <input type="text" id="createAvatar" class="modal-input" value="⚡" maxlength="2">
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <input type="text" id="createStatus" class="modal-input" placeholder="Добро пожаловать в [the] masonybook!">
+      </div>
+      <div class="form-group">
+        <label>Город</label>
+        <input type="text" id="createCity" class="modal-input" placeholder="Липецк">
+      </div>
+      <div class="form-group">
+        <label>Образование</label>
+        <input type="text" id="createEdu" class="modal-input" placeholder="Школа / Лицей / ВУЗ">
+      </div>
+      <div class="form-group">
+        <label>Хобби</label>
+        <input type="text" id="createHobby" class="modal-input" placeholder="Спорт, IT, музыка">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('createModal')">Отмена</button>
+        <button class="btn btn-primary" onclick="createNewUser()">Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ВСТАВЛЕНЫ ТВОИ КЛЮЧИ FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyCxL0xZjVHTPZAAFV5pMw9vSBjmDwKAX1Q",
+      authDomain: "the-masonybook.firebaseapp.com",
+      databaseURL: "https://the-masonybook-default-rtdb.firebaseio.com",
+      projectId: "the-masonybook",
+      storageBucket: "the-masonybook.firebasestorage.app",
+      messagingSenderId: "859966333747",
+      appId: "1:859966333747:web:1caae21f7c83f802599446",
+      measurementId: "G-M1TKX10Q7M"
+    };
+
+    // Инициализация
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let users = {};
+    let currentUserId = localStorage.getItem('mb_cloud_uid') || '';
+    let viewingUserId = '';
+
+    // Подписка на изменение пользователей в облаке
+    db.ref('users').on('value', (snapshot) => {
+      users = snapshot.val() || {};
+      
+      // Создаем первого пользователя, если база только создана
+      if (Object.keys(users).length === 0) {
+        const initUser = {
+          id: 'u_stepan',
+          name: 'Степан',
+          avatar: '💻',
+          status: '«Основатель [the] masonybook»',
+          city: 'Липецк',
+          edu: 'Лицей №44',
+          hobby: 'Теннис, 3D-моделирование, разработка'
+        };
+        db.ref('users/' + initUser.id).set(initUser);
+        return;
+      }
+
+      if (!currentUserId || !users[currentUserId]) {
+        currentUserId = Object.keys(users)[0];
+        localStorage.setItem('mb_cloud_uid', currentUserId);
+      }
+      if (!viewingUserId || !users[viewingUserId]) {
+        viewingUserId = currentUserId;
+      }
+
+      renderUI();
+    });
+
+    // Подписка на обновление ленты постов в реальном времени
+    db.ref('posts').on('value', () => {
+      renderFeed();
+    });
+
+    function renderUI() {
+      const select = document.getElementById('activeUserSelect');
+      select.innerHTML = Object.values(users).map(u => 
+        `<option value="${u.id}" ${u.id === currentUserId ? 'selected' : ''}>${u.avatar} ${u.name}</option>`
+      ).join('');
+
+      const me = users[currentUserId];
+      if (me) {
+        document.getElementById('composerHint').textContent = `Публикация от имени: ${me.name}`;
+      }
+
+      const viewing = users[viewingUserId];
+      if (viewing) {
+        document.getElementById('profAvatar').textContent = viewing.avatar || '👤';
+        document.getElementById('profName').textContent = viewing.name;
+        document.getElementById('profStatus').textContent = viewing.status || 'Статус не указан';
+        document.getElementById('profCity').textContent = viewing.city || 'Не указан';
+        document.getElementById('profEdu').textContent = viewing.edu || 'Не указано';
+        document.getElementById('profHobby').textContent = viewing.hobby || 'Не указано';
+      }
+
+      document.getElementById('usersCount').textContent = Object.keys(users).length;
+      const usersList = document.getElementById('usersList');
+      usersList.innerHTML = Object.values(users).map(u => `
+        <div class="user-chip ${u.id === viewingUserId ? 'active' : ''}" onclick="viewUser('${u.id}')">
+          <span style="font-size:1.2rem;">${u.avatar || '👤'}</span>
+          <span>${u.name}</span>
+        </div>
+      `).join('');
+
+      renderFeed();
+    }
+
+    function renderFeed() {
+      const feed = document.getElementById('feed');
+      db.ref('posts').once('value', (snapshot) => {
+        const allPosts = snapshot.val() || {};
+        const postsArray = Object.values(allPosts).filter(p => p.wallUserId === viewingUserId);
+
+        if (postsArray.length === 0) {
+          feed.innerHTML = `
+            <div class="liquid-panel post-card" style="text-align:center; color:var(--text-muted);">
+              На этой стене пока пусто. Напишите первое сообщение!
+            </div>
+          `;
+          return;
+        }
+
+        postsArray.sort((a, b) => b.id - a.id);
+
+        feed.innerHTML = postsArray.map(p => `
+          <div class="liquid-panel post-card">
+            <div class="post-header">
+              <div class="post-author-wrap">
+                <div class="post-author-avatar">${p.authorAvatar}</div>
+                <div>
+                  <div class="post-author-name">${escapeHtml(p.authorName)}</div>
+                  <div class="post-date">${p.date}</div>
+                </div>
+              </div>
+            </div>
+            <div class="post-content">${escapeHtml(p.text)}</div>
+          </div>
+        `).join('');
+      });
+    }
+
+    function switchCurrentUser(id) {
+      currentUserId = id;
+      localStorage.setItem('mb_cloud_uid', id);
+      renderUI();
+    }
+
+    function viewUser(id) {
+      viewingUserId = id;
+      renderUI();
+    }
+
+    function publishPost() {
+      const textarea = document.getElementById('postText');
+      const text = textarea.value.trim();
+      if (!text) return;
+
+      const me = users[currentUserId];
+      const newPostId = Date.now();
+      const newPost = {
+        id: newPostId,
+        wallUserId: viewingUserId,
+        authorName: me.name,
+        authorAvatar: me.avatar,
+        text: text,
+        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      db.ref('posts/' + newPostId).set(newPost);
+      textarea.value = '';
+    }
+
+    function createNewUser() {
+      const name = document.getElementById('createName').value.trim();
+      if (!name) return alert('Введите имя!');
+
+      const newId = 'u_' + Date.now();
+      const newUser = {
+        id: newId,
+        name: name,
+        avatar: document.getElementById('createAvatar').value.trim() || '⚡',
+        status: document.getElementById('createStatus').value.trim(),
+        city: document.getElementById('createCity').value.trim(),
+        edu: document.getElementById('createEdu').value.trim(),
+        hobby: document.getElementById('createHobby').value.trim()
+      };
+
+      db.ref('users/' + newId).set(newUser).then(() => {
+        currentUserId = newId;
+        viewingUserId = newId;
+        localStorage.setItem('mb_cloud_uid', newId);
+        closeModal('createModal');
+      });
+    }
+
+    function openEditModal() {
+      const u = users[viewingUserId];
+      if (!u) return;
+      document.getElementById('editName').value = u.name;
+      document.getElementById('editAvatar').value = u.avatar || '👤';
+      document.getElementById('editStatus').value = u.status || '';
+      document.getElementById('editCity').value = u.city || '';
+      document.getElementById('editEdu').value = u.edu || '';
+      document.getElementById('editHobby').value = u.hobby || '';
+      openModal('editModal');
+    }
+
+    function saveProfileEdit() {
+      const u = users[viewingUserId];
+      if (!u) return;
+
+      const updated = {
+        ...u,
+        name: document.getElementById('editName').value.trim() || u.name,
+        avatar: document.getElementById('editAvatar').value.trim() || '👤',
+        status: document.getElementById('editStatus').value.trim(),
+        city: document.getElementById('editCity').value.trim(),
+        edu: document.getElementById('editEdu').value.trim(),
+        hobby: document.getElementById('editHobby').value.trim()
+      };
+
+      db.ref('users/' + u.id).set(updated).then(() => {
+        closeModal('editModal');
+      });
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function escapeHtml(s) { return s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t)); }
+  </script>
+</body>
+</html>
